@@ -1,3 +1,4 @@
+
 # Chocolate Bravo 🍫  
 A full-stack e-commerce web application built with the MERN stack (MongoDB, Express, React, Node.js) featuring Docker-based local development and production-ready Kubernetes deployment.
 
@@ -236,3 +237,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Thanks to all contributors who have helped shape this project
 - Special thanks to the open-source community for their invaluable tools and libraries 
+
+# my-chocolate-busines
+debba17219c9da85df9760c5933959344a0a73b8
