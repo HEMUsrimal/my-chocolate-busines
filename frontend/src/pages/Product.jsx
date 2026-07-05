@@ -10,19 +10,19 @@ import {
   faShoppingCart, 
   faTruck, 
   faShieldAlt, 
-  faUndo, 
   faStar,
-  faCreditCard,
-  faMoneyBillWave,
   faCalendarAlt,
   faBox,
   faExchangeAlt,
   faUser,
   faSpinner,
   faCheckCircle,
-  faExclamationCircle
+  faExclamationCircle,
+  faPercent,
+  faGift
 } from "@fortawesome/free-solid-svg-icons";
-import { faCcVisa, faCcMastercard, faCcPaypal, faPaypal } from "@fortawesome/free-brands-svg-icons";
+import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 const Product = () => {
   const { id } = useParams();
@@ -78,13 +78,14 @@ const Product = () => {
     if (product) {
       addToCart({ ...product, quantity });
       setInCart(true);
+      toast.success(`${product.name} (x${quantity}) added to cart!`);
     }
   };
 
   const handleBuyNow = () => {
     if (product) {
       addToCart({ ...product, quantity });
-      // Add navigation to checkout page here
+      navigate("/cart");
     }
   };
 
@@ -117,6 +118,7 @@ const Product = () => {
       setReviews([newReview, ...reviews]);
       setReview({ rating: 5, comment: "" });
       setReviewSuccess(true);
+      toast.success("Review submitted!");
       
       // Reset success message after 3 seconds
       setTimeout(() => {
@@ -132,18 +134,21 @@ const Product = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-900"></div>
+      <div className="flex justify-center items-center min-h-[60vh] font-poppins">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3D1E11] mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Unveiling our chocolate masterpiece...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
+      <div className="flex justify-center items-center min-h-[60vh] font-poppins">
+        <div className="text-center bg-[#1E100A]/5 border border-chocolate-200 p-8 rounded-2xl max-w-md shadow-sm">
           <h2 className="text-2xl font-bold text-red-600 mb-4">{error || "Product not found"}</h2>
-          <Link to="/shop" className="text-amber-900 hover:text-amber-800">
+          <Link to="/shop" className="bg-[#3D1E11] hover:bg-[#4A2717] text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md transition inline-block">
             Return to Shop
           </Link>
         </div>
@@ -152,249 +157,229 @@ const Product = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Breadcrumb */}
-      <div className="bg-white">
+    <div className="min-h-screen bg-[#FCFAF7] font-poppins text-[#2B170E] pb-16">
+      
+      {/* Breadcrumb section */}
+      <div className="bg-[#FCFAF7] border-b border-chocolate-100/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <nav className="flex" aria-label="Breadcrumb">
+          <nav className="flex text-xs font-semibold text-gray-400" aria-label="Breadcrumb">
             <ol className="flex items-center space-x-2">
               <li>
-                <Link to="/" className="text-gray-500 hover:text-amber-900 transition-colors">Home</Link>
+                <Link to="/" className="hover:text-[#3D1E11] transition-colors">Home</Link>
               </li>
               <li className="flex items-center">
-                <span className="mx-2 text-gray-400">/</span>
-                <Link to="/shop" className="text-gray-500 hover:text-amber-900 transition-colors">Shop</Link>
+                <span className="mx-2 text-gray-300">/</span>
+                <Link to="/shop" className="hover:text-[#3D1E11] transition-colors">Shop</Link>
               </li>
               <li className="flex items-center">
-                <span className="mx-2 text-gray-400">/</span>
-                <span className="text-amber-900 font-medium">{product.name}</span>
+                <span className="mx-2 text-gray-300">/</span>
+                <span className="text-[#3D1E11] font-bold">{product.name}</span>
               </li>
             </ol>
           </nav>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left Column - Images */}
-          <div className="space-y-6">
-            <div className="flex gap-6">
-              {/* Main Image */}
-              <div className="w-3/4">
-                <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden bg-gray-50 rounded-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 bg-white rounded-3xl p-6 md:p-10 border border-[#FAF6F0] shadow-sm">
+          
+          {/* Left Column - Gallery */}
+          <div className="lg:col-span-6 flex flex-col md:flex-row-reverse gap-4">
+            
+            {/* Main Image View */}
+            <div className="flex-grow bg-[#FCFAF7] rounded-2xl overflow-hidden border border-[#FAF6F0] p-6 flex items-center justify-center h-[350px] md:h-[450px]">
+              <img
+                src={thumbnail || "/placeholder-image.jpg"}
+                alt={product.name}
+                className="w-full h-full object-contain drop-shadow-md hover:scale-102 transition-transform duration-500"
+              />
+            </div>
+
+            {/* Thumbnail Selectors */}
+            <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible gap-3 flex-shrink-0">
+              {product.images?.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setThumbnail(image)}
+                  className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-[#FCFAF7] rounded-xl overflow-hidden border p-1 transition-all ${
+                    thumbnail === image 
+                      ? 'border-[#d4af37] ring-2 ring-[#d4af37]/20 shadow-md' 
+                      : 'border-chocolate-100 hover:border-chocolate-300'
+                  }`}
+                >
                   <img
-                    src={thumbnail}
-                    alt={product.name}
+                    src={image}
+                    alt={`${product.name} thumbnail ${index + 1}`}
                     className="w-full h-full object-contain"
                   />
-                </div>
-              </div>
-
-              {/* Thumbnails */}
-              <div className="w-1/4 space-y-4">
-                {product.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setThumbnail(image)}
-                    className={`w-full aspect-w-1 aspect-h-1 overflow-hidden bg-gray-50 rounded-lg transition-all duration-200 ${
-                      thumbnail === image ? 'ring-2 ring-amber-900' : 'hover:ring-1 hover:ring-amber-900/50'
-                    }`}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.name} thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Right Column - Product Info */}
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-3xl font-medium text-gray-900">{product.name}</h1>
-              <div className="mt-2 flex items-center">
-                <div className="flex items-center">
+          {/* Right Column - Product details */}
+          <div className="lg:col-span-6 space-y-6 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="bg-[#3D1E11]/5 px-3 py-1 rounded-full text-xs font-bold text-chocolate-800">
+                  {product.category}
+                </span>
+                
+                {product.stock > 0 ? (
+                  <span className="bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full border border-green-200">
+                    In Stock ({product.stock} available)
+                  </span>
+                ) : (
+                  <span className="bg-red-50 text-red-700 text-xs font-bold px-3 py-1 rounded-full border border-red-200">
+                    Out of Stock
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-2xl md:text-3xl font-extrabold text-[#3D1E11] tracking-tight leading-tight">
+                {product.name}
+              </h1>
+
+              {/* Star rating summary */}
+              <div className="flex items-center space-x-2 pb-2">
+                <div className="flex items-center text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <FontAwesomeIcon
                       key={i}
                       icon={faStar}
-                      className={`w-5 h-5 ${
-                        i < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-200'
+                      className={`w-4 h-4 ${
+                        i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-200'
                       }`}
                     />
                   ))}
                 </div>
-                <span className="ml-2 text-sm text-gray-500">
-                  ({product.numReviews || 0} reviews)
+                <span className="text-xs font-bold text-gray-500">
+                  {product.rating ? product.rating.toFixed(1) : "New"} ({product.numReviews || 0} reviews)
                 </span>
               </div>
-            </div>
 
-            <div className="border-t border-b border-gray-100 py-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-2xl font-medium text-amber-900">
-                    ${product.price?.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-gray-500">Inclusive of all taxes</p>
+              <hr className="border-chocolate-100" />
+
+              {/* Price display */}
+              <div className="py-2">
+                <div className="flex items-baseline space-x-2">
+                  <span className="text-3xl font-black text-chocolate-900">${product.price?.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 font-medium">Inclusive of all local import taxes</span>
                 </div>
-                <div className={`px-3 py-1 text-sm font-medium ${
-                  product.stock > 0 
-                    ? 'text-green-700 bg-green-50' 
-                    : 'text-red-700 bg-red-50'
-                }`}>
-                  {product.stock > 0 ? `In Stock (${product.stock} available)` : 'Out of Stock'}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-chocolate-900 uppercase tracking-wider">Product Info</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{product.description}</p>
+              </div>
+
+              {/* Trust highlights checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#FCFAF7] p-4 rounded-2xl border border-[#FAF6F0] text-xs font-semibold text-gray-600">
+                <div className="flex items-center space-x-2.5">
+                  <FontAwesomeIcon icon={faTruck} className="text-[#d4af37] w-4" />
+                  <span>Isothermal Packaging Included</span>
+                </div>
+                <div className="flex items-center space-x-2.5">
+                  <FontAwesomeIcon icon={faShieldAlt} className="text-[#d4af37] w-4" />
+                  <span>Secure Premium Checkout</span>
+                </div>
+                <div className="flex items-center space-x-2.5">
+                  <FontAwesomeIcon icon={faCalendarAlt} className="text-[#d4af37] w-4" />
+                  <span>Freshness Guaranteed</span>
+                </div>
+                <div className="flex items-center space-x-2.5">
+                  <FontAwesomeIcon icon={faExchangeAlt} className="text-[#d4af37] w-4" />
+                  <span>30 Days Returns & Refund Policy</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Description</h3>
-              <p className="text-gray-600 leading-relaxed">{product.description}</p>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Category</h3>
-              <span className="inline-block text-sm text-amber-900 border border-amber-900 px-3 py-1">
-                {product.category}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Shipping Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Shipping Information</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="text-amber-900 w-5 h-5" />
-                    <div>
-                      <span className="text-gray-600">Delivery Time</span>
-                      <p className="font-medium">3-5 business days</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faTruck} className="text-amber-900 w-5 h-5" />
-                    <div>
-                      <span className="text-gray-600">Shipping Cost</span>
-                      <p className="font-medium text-green-600">Free</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faExchangeAlt} className="text-amber-900 w-5 h-5" />
-                    <div>
-                      <span className="text-gray-600">Return Policy</span>
-                      <p className="font-medium">30 days</p>
-                    </div>
-                  </div>
+            {/* Quantity controls and Cart triggers */}
+            <div className="space-y-4 pt-4 border-t border-chocolate-100">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                
+                {/* Quantity selector */}
+                <div className="flex items-center justify-between border border-chocolate-200 rounded-xl px-4 py-2.5 bg-[#FCFAF7] w-full sm:w-auto space-x-6">
+                  <button
+                    onClick={decrement}
+                    disabled={quantity <= 1}
+                    className="text-[#3D1E11] hover:text-[#aa704e] disabled:opacity-30 font-extrabold text-lg px-2 cursor-pointer"
+                  >
+                    -
+                  </button>
+                  <span className="font-extrabold text-sm w-6 text-center">{quantity}</span>
+                  <button
+                    onClick={increment}
+                    disabled={quantity >= product.stock}
+                    className="text-[#3D1E11] hover:text-[#aa704e] disabled:opacity-30 font-extrabold text-lg px-2 cursor-pointer"
+                  >
+                    +
+                  </button>
                 </div>
-              </div>
 
-              {/* Payment Methods */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Payment Methods</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faCreditCard} className="text-amber-900 w-5 h-5" />
-                    <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon icon={faCcVisa} className="text-blue-600 w-6 h-6" />
-                      <FontAwesomeIcon icon={faCcMastercard} className="text-red-600 w-6 h-6" />
-                      <span className="text-gray-600">Credit/Debit Card</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faPaypal} className="text-blue-600 w-5 h-5" />
-                    <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon icon={faCcPaypal} className="text-blue-600 w-6 h-6" />
-                      <span className="text-gray-600">PayPal</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <FontAwesomeIcon icon={faMoneyBillWave} className="text-amber-900 w-5 h-5" />
-                    <span className="text-gray-600">Cash on Delivery</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-4 border border-gray-200 rounded-lg px-3 py-2">
+                {/* Add to Cart button */}
                 <button
-                  onClick={decrement}
-                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
-                  disabled={quantity <= 1}
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                  className="w-full sm:flex-grow bg-[#3D1E11] hover:bg-gold-gradient hover:text-[#2B170E] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center space-x-2 shadow-lg hover:shadow-amber-500/10 transition active:scale-[0.98] cursor-pointer"
                 >
-                  -
-                </button>
-                <span className="text-lg font-medium w-8 text-center">{quantity}</span>
-                <button
-                  onClick={increment}
-                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
-                  disabled={quantity >= product.stock}
-                >
-                  +
+                  <FontAwesomeIcon icon={faShoppingCart} />
+                  <span>Add to Shopping Bag</span>
                 </button>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-                className={`flex-1 bg-amber-900 text-white px-6 py-3 font-medium hover:bg-amber-800 transition-colors rounded-lg ${
-                  product.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                Add to Cart
-              </button>
-
+              {/* Quick Checkout */}
               <button
                 onClick={handleBuyNow}
                 disabled={product.stock === 0}
-                className="flex-1 border border-amber-900 text-amber-900 px-6 py-3 font-medium hover:bg-amber-50 transition-colors rounded-lg disabled:opacity-50"
+                className="w-full border border-chocolate-200 hover:border-[#3D1E11] hover:bg-white text-chocolate-800 font-bold py-3 px-6 rounded-xl text-sm transition cursor-pointer"
               >
-                Buy Now
+                Express Checkout
               </button>
             </div>
 
-            
           </div>
         </div>
 
-        {/* Reviews Section */}
-        <div className="mt-16 border-t border-gray-100 pt-12">
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-medium text-gray-900">Customer Reviews</h2>
-              <div className="flex items-center">
-                <div className="flex items-center mr-2">
+        {/* Reviews section */}
+        <div className="mt-16 bg-white rounded-3xl border border-[#FAF6F0] p-6 md:p-10 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-chocolate-100">
+            <div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-[#3D1E11]">Client Reviews</h2>
+              <p className="text-xs text-gray-500 font-semibold mt-1">What our luxury chocolate connoisseurs think</p>
+            </div>
+            
+            <div className="flex items-center space-x-3 bg-[#FCFAF7] px-4 py-2.5 rounded-xl border border-[#FAF6F0]">
+              <span className="text-2xl font-black text-chocolate-900">{product.rating ? product.rating.toFixed(1) : "New"}</span>
+              <div className="flex flex-col">
+                <div className="flex text-yellow-400 text-xs">
                   {[...Array(5)].map((_, i) => (
                     <FontAwesomeIcon
                       key={i}
                       icon={faStar}
-                      className={`w-5 h-5 ${
-                        i < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-200'
+                      className={`w-3.5 h-3.5 ${
+                        i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-200'
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-gray-600">
-                  {product.numReviews || 0} {product.numReviews === 1 ? 'review' : 'reviews'}
-                </span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{product.numReviews || 0} Ratings</span>
               </div>
             </div>
-            
-            {/* Review Form */}
-            <div className="bg-gray-50 rounded-xl p-6 mb-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Write a Review</h3>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            {/* Left side form */}
+            <div className="lg:col-span-5 bg-[#FCFAF7] rounded-2xl p-6 border border-chocolate-200 h-fit">
+              <h3 className="text-base font-bold text-[#3D1E11] mb-4">Share Your Taste Experience</h3>
               {!isAuthenticated ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">Please log in to write a review</p>
+                <div className="text-center py-6">
+                  <p className="text-xs text-gray-500 font-semibold mb-4">Sign in to write a review for this product</p>
                   <Link
                     to="/login"
                     state={{ from: `/product/${id}` }}
-                    className="inline-block bg-amber-900 text-white px-6 py-2 rounded-lg font-medium hover:bg-amber-800 transition-colors"
+                    className="inline-block bg-[#3D1E11] hover:bg-[#4A2717] text-white text-xs font-bold py-2.5 px-6 rounded-full shadow"
                   >
                     Log In
                   </Link>
@@ -402,105 +387,111 @@ const Product = () => {
               ) : (
                 <form onSubmit={handleReviewSubmit} className="space-y-4">
                   <div>
-                    <div className="flex items-center space-x-2">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rating</label>
+                    <div className="flex items-center space-x-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
                           onClick={() => setReview({ ...review, rating: star })}
-                          className="focus:outline-none transform hover:scale-110 transition-transform"
+                          className="focus:outline-none cursor-pointer transform hover:scale-110 active:scale-95 transition"
                         >
                           <FontAwesomeIcon
                             icon={faStar}
                             className={`w-6 h-6 ${
-                              star <= review.rating ? 'text-yellow-400' : 'text-gray-300'
+                              star <= review.rating ? 'text-yellow-400' : 'text-gray-200'
                             }`}
                           />
                         </button>
                       ))}
                     </div>
                   </div>
+
                   <div>
+                    <label htmlFor="comment" className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Comment</label>
                     <textarea
                       id="comment"
                       rows={4}
                       value={review.comment}
                       onChange={(e) => setReview({ ...review, comment: e.target.value })}
-                      className="p-4 w-full rounded-lg border-gray-300 shadow-sm focus:border-amber-900 focus:ring-amber-900"
-                      placeholder="Share your experience with this product..."
+                      className="p-3 w-full rounded-xl bg-white border border-chocolate-200 text-sm text-[#2B170E] focus:outline-none focus:border-[#3D1E11] transition placeholder-gray-400"
+                      placeholder="Describe the texture, smoothness, and flavor..."
                       required
                     />
                   </div>
+
                   {reviewError && (
-                    <div className="flex items-center text-red-600">
+                    <div className="flex items-center text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
                       <FontAwesomeIcon icon={faExclamationCircle} className="mr-2" />
                       <span>{reviewError}</span>
                     </div>
                   )}
-                  {reviewSuccess && (
-                    <div className="flex items-center text-green-600">
-                      <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
-                      <span>Review submitted successfully!</span>
-                    </div>
-                  )}
+
                   <button
                     type="submit"
                     disabled={reviewLoading}
-                    className="w-full bg-amber-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-amber-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[#3D1E11] hover:bg-[#4A2717] text-white font-bold py-3 px-4 rounded-xl text-xs shadow hover:shadow-lg active:scale-[0.98] transition cursor-pointer"
                   >
                     {reviewLoading ? (
                       <span className="flex items-center justify-center">
                         <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
-                        Submitting...
+                        Submitting Review...
                       </span>
                     ) : (
-                      'Submit Review'
+                      'Publish Review'
                     )}
                   </button>
                 </form>
               )}
             </div>
 
-            {/* Reviews List */}
-            <div className="space-y-8">
+            {/* Right side list */}
+            <div className="lg:col-span-7 space-y-6">
               {reviews.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No reviews yet. Be the first to review this product!</p>
+                <div className="text-center py-12 bg-[#FCFAF7] rounded-2xl border border-dashed border-chocolate-200">
+                  <p className="text-sm text-gray-500 font-medium">Be the first to review this chocolate bar! 🍫</p>
                 </div>
               ) : (
-                reviews.map((review) => (
-                  <div key={review._id} className="border-b border-gray-100 pb-8 last:border-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                          <FontAwesomeIcon icon={faUser} className="text-gray-500" />
+                <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+                  {reviews.map((review) => (
+                    <div key={review._id} className="bg-[#FCFAF7] rounded-2xl p-5 border border-[#FAF6F0] shadow-2xs">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-full bg-gold-gradient flex items-center justify-center text-xs text-[#2B170E] font-extrabold uppercase">
+                            {review.user?.name?.charAt(0) || "C"}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-[#3D1E11]">{review.user?.name || 'Anonymous client'}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                              {new Date(review.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{review.user?.name || 'Anonymous'}</p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                          </p>
+                        
+                        <div className="flex items-center text-yellow-400 text-xs">
+                          {[...Array(5)].map((_, i) => (
+                            <FontAwesomeIcon
+                              key={i}
+                              icon={faStar}
+                              className={`w-3.5 h-3.5 ${
+                                i < review.rating ? 'text-yellow-400' : 'text-gray-200'
+                              }`}
+                            />
+                          ))}
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <FontAwesomeIcon
-                            key={i}
-                            icon={faStar}
-                            className={`w-4 h-4 ${
-                              i < review.rating ? 'text-yellow-400' : 'text-gray-200'
-                            }`}
-                          />
-                        ))}
-                      </div>
+                      
+                      <p className="text-sm text-gray-600 leading-relaxed pl-1">
+                        {review.comment}
+                      </p>
                     </div>
-                    <p className="text-gray-600 p-4">{review.comment}</p>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

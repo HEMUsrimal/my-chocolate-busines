@@ -12,6 +12,8 @@ import { useFavorites } from '../context/FavoritesContext';
 import { useCart } from '../context/CartContext';
 import { getProducts, searchProducts, getProductsByCategory } from '../services/productService';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ShopComponent = () => {
   const [products, setProducts] = useState([]);
@@ -21,20 +23,10 @@ const ShopComponent = () => {
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [notificationProduct, setNotificationProduct] = useState(null);
   const [imageError, setImageError] = useState({});
 
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const { addToCart } = useCart();
-
-  // Log products state changes for debugging
-  useEffect(() => {
-    console.log('🔄 Products state updated:', {
-      count: products.length,
-      products: products
-    });
-  }, [products]);
 
   useEffect(() => {
     fetchProducts();
@@ -42,37 +34,14 @@ const ShopComponent = () => {
 
   const fetchProducts = async () => {
     try {
-      console.log('🔄 Starting to fetch products...');
       setLoading(true);
       setError(null);
-      
       const response = await getProducts();
-      console.log('📦 Raw API response:', response);
-      
-      if (!response) {
-        console.error('❌ No response received from API');
-        throw new Error('No response received from server');
-      }
-      
-      // Handle both paginated and direct array responses
-      const products = Array.isArray(response) ? response : response.products || [];
-      
-      console.log('📦 Processed products:', {
-        isArray: Array.isArray(products),
-        length: products?.length,
-        firstProduct: products[0],
-        allProducts: products
-      });
-      
-      setProducts(products);
+      const productsData = Array.isArray(response) ? response : response.products || [];
+      setProducts(productsData);
     } catch (err) {
-      console.error('❌ Error in fetchProducts:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        stack: err.stack
-      });
-      setError(err.response?.data?.message || 'Failed to load products. Please try again later.');
+      console.error('Error fetching products:', err);
+      setError('Failed to load products. Please check your server connection.');
       setProducts([]);
     } finally {
       setLoading(false);
@@ -93,26 +62,34 @@ const ShopComponent = () => {
       } else if (category !== 'All') {
         data = await getProductsByCategory(category);
       } else {
-        data = await getProducts();
+        const response = await getProducts();
+        data = Array.isArray(response) ? response : response.products || [];
       }
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error in handleSearch:', err);
-      setError(err.response?.data?.message || 'Failed to search products. Please try again later.');
+      console.error('Error searching products:', err);
+      setError('Failed to find matching products.');
       setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (product.stock === 0) {
+      toast.error('Product is out of stock');
+      return;
+    }
     addToCart(product);
-    setNotificationProduct(product);
-    setNotification(true);
-    setTimeout(() => {
-      setNotification(false);
-      setNotificationProduct(null);
-    }, 3000);
+    toast.success(`${product.name} added to cart!`);
+  };
+
+  const handleFavoriteClick = (e, productId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(productId);
   };
 
   const handleCategoryChange = async (newCategory) => {
@@ -122,15 +99,15 @@ const ShopComponent = () => {
       setError(null);
       let data;
       if (newCategory === 'All') {
-        data = await getProducts();
+        const response = await getProducts();
+        data = Array.isArray(response) ? response : response.products || [];
       } else {
         data = await getProductsByCategory(newCategory);
       }
-      console.log('Category products:', data);
-        setProducts([...data]);
+      setProducts(data);
     } catch (err) {
-      console.error('Error in handleCategoryChange:', err);
-      setError('Failed to filter products. Please try again later.');
+      console.error('Error changing category:', err);
+      setError('Failed to filter products.');
       setProducts([]);
     } finally {
       setLoading(false);
@@ -153,61 +130,29 @@ const ShopComponent = () => {
       default:
         break;
     }
-    setProducts([...sortedProducts]);
-  };
-
-  const ProductCard = ({ product }) => {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const images = product.images || [product.image];
-
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="relative h-48">
-          <img
-            src={images[currentImageIndex]}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-          {images.length > 1 && (
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-              {images.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentImageIndex(index)}
-                  className={`w-2 h-2 rounded-full ${
-                    currentImageIndex === index ? 'bg-white' : 'bg-white/50'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="p-4">
-          <h3 className="text-lg font-semibold">{product.name}</h3>
-          <p className="text-gray-600">${product.price}</p>
-          <p className="text-sm text-gray-500">{product.category}</p>
-        </div>
-      </div>
-    );
+    setProducts(sortedProducts);
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#8B4513]"></div>
+      <div className="flex justify-center items-center min-h-[60vh] font-poppins text-gray-500">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#3D1E11] mx-auto mb-4"></div>
+          <p className="text-sm">Fetching premium collections...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
+      <div className="flex justify-center items-center min-h-[60vh] font-poppins">
+        <div className="text-center bg-[#1E100A]/5 border border-chocolate-200 p-8 rounded-2xl max-w-md shadow-sm">
+          <h3 className="text-lg font-bold text-red-600 mb-2">Error Occurred</h3>
+          <p className="text-sm text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchProducts}
-            className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            className="bg-[#3D1E11] hover:bg-[#4A2717] text-white font-bold py-2.5 px-6 rounded-full text-sm shadow-md transition"
           >
             Try Again
           </button>
@@ -216,172 +161,230 @@ const ShopComponent = () => {
     );
   }
 
-  if (!products || products.length === 0) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">No Products Found</h2>
-          <p className="text-gray-600 mb-4">We couldn't find any products matching your criteria.</p>
+  return (
+    <div className="container mx-auto px-4 py-8 font-poppins text-[#2B170E]">
+      
+      {/* Immersive Shop Hero */}
+      <div className="relative bg-[#1E100A] text-white py-16 px-8 rounded-3xl mb-12 text-center overflow-hidden shadow-xl border border-white/5">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.08),transparent)] pointer-events-none" />
+        <h1 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight">Artisanal Chocolates</h1>
+        <p className="text-sm md:text-lg text-gray-300 max-w-xl mx-auto mb-8 font-medium">
+          Indulge in premium quality chocolates crafted by master chocolatiers from fine organic fairtrade cacao.
+        </p>
+
+        {/* Search bar inside hero */}
+        <div className="max-w-lg mx-auto bg-white rounded-full p-1.5 shadow-lg flex items-center border border-chocolate-200">
+          <FontAwesomeIcon icon={faSearch} className="text-[#3D1E11] ml-4 flex-shrink-0" />
+          <input
+            type="text"
+            placeholder="Search chocolate bars, gift sets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="w-full px-3 py-2 text-sm text-[#2B170E] bg-transparent outline-none placeholder-gray-400"
+          />
           <button
-            onClick={fetchProducts}
-            className="bg-[#8B4513] hover:bg-[#A0522D] text-white font-bold py-2 px-4 rounded"
+            onClick={handleSearch}
+            className="bg-[#3D1E11] hover:bg-[#4A2717] text-[#FCFAF7] font-bold text-xs py-2.5 px-5 rounded-full shadow transition"
           >
-            Refresh Products
+            Find
           </button>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#8B4513] to-[#A0522D] text-white py-16 px-8 rounded-lg mb-8 text-center">
-        <h1 className="text-4xl font-bold mb-4">Premium Chocolate Collection</h1>
-        <p className="text-xl opacity-90 mb-8">Discover our handcrafted selection of fine chocolates</p>
-        <div className="max-w-2xl mx-auto bg-white/90 rounded-lg p-2">
-          <div className="flex items-center">
-            <FontAwesomeIcon icon={faSearch} className="text-[#8B4513] ml-4" />
-            <input
-              type="text"
-              placeholder="Search chocolates..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full px-4 py-2 focus:outline-none bg-transparent text-muted-foreground"
-            />
-          </div>
+      {/* Modern Filter Pill Panel */}
+      <div className="bg-white rounded-2xl border border-[#FAF6F0] p-5 shadow-sm mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        
+        {/* Category Pills list */}
+        <div className="flex flex-wrap gap-2">
+          {['All', 'Dark Chocolate', 'Milk Chocolate', 'White Chocolate', 'Nut Chocolate', 'Gift Box'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => handleCategoryChange(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer ${
+                category === cat
+                  ? 'bg-[#3D1E11] text-[#FCFAF7] shadow-md'
+                  : 'bg-[#FCFAF7] text-[#2B170E]/70 hover:bg-[#3D1E11]/5 hover:text-[#3D1E11]'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Filters Section */}
-      <div className="bg-gray-50 p-6 rounded-lg mb-8">
-        <div className="flex flex-wrap gap-4 items-center">
+        {/* Action controls */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          
+          {/* Sorting Dropdown */}
+          <div className="flex items-center space-x-2 border border-chocolate-200 rounded-xl px-3 py-2 bg-[#FCFAF7]">
+            <FontAwesomeIcon icon={faSort} className="text-chocolate-600 text-xs" />
+            <select
+              value={sort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="text-xs font-bold text-[#2B170E] bg-transparent focus:outline-none border-none outline-none cursor-pointer"
+            >
+              <option value="featured">Featured Selections</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="name">Alphabetical</option>
+            </select>
+          </div>
+
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="bg-[#8B4513] hover:bg-[#A0522D] text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 border ${
+              showFilters 
+                ? 'bg-chocolate-50 border-[#3D1E11] text-[#3D1E11]' 
+                : 'border-chocolate-200 hover:bg-gray-50 text-gray-600'
+            }`}
           >
             <FontAwesomeIcon icon={faFilter} />
-            Filters
-          </button>
-          <button
-            onClick={() => handleSortChange('price-low')}
-            disabled={sort === 'price-low'}
-            className="border border-gray-300 hover:bg-gray-100 font-bold py-2 px-4 rounded-lg flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faSort} />
-            Price: Low to High
-          </button>
-          <button
-            onClick={() => handleSortChange('price-high')}
-            disabled={sort === 'price-high'}
-            className="border border-gray-300 hover:bg-gray-100 font-bold py-2 px-4 rounded-lg flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faSort} />
-            Price: High to Low
+            <span>Options</span>
           </button>
         </div>
-
-        {showFilters && (
-          <div className="mt-6">
-            <h3 className="text-lg font-bold text-gray-600 mb-3">Categories</h3>
-            <div className="flex flex-wrap gap-2">
-              {['All', 'Dark Chocolate', 'Milk Chocolate', 'White Chocolate', 'Nut Chocolate', 'Gift Box'].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => handleCategoryChange(cat)}
-                  className={`px-4 py-2 rounded-full ${
-                    category === cat
-                      ? 'bg-[#8B4513] text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Notification */}
-      {notification && notificationProduct && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-          {notificationProduct.name} added to cart!
-        </div>
-      )}
-
-      {/* Products Grid */}
-      <h2 className="text-2xl font-bold mb-4">Our Products</h2>
-      {products.length === 0 ? (
-        <p className="text-center text-gray-600">No products found.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {products.map((product) => (
-            <div
-              key={product._id}
-              className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:-translate-y-2 hover:shadow-lg"
-            >
-              <Link to={`/product/${product._id}`} className="block">
-                <div className="relative h-48">
-                  <img
-                    src={product.images?.[0] || 'https://via.placeholder.com/300x200?text=Chocolate'}
-                    alt={product.name || 'Product'}
-                    className="w-full h-full object-cover"
-                    onError={() => handleImageError(product._id)}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleFavorite(product._id);
-                    }}
-                    className="absolute top-2 right-2 bg-white/90 hover:bg-white p-2 rounded-full"
-                  >
-                    <FontAwesomeIcon
-                      icon={faHeart}
-                      className={isFavorite(product._id) ? 'text-pink-500' : 'text-[#8B4513]'}
-                    />
-                  </button>
-                  {product.stock === 0 && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="text-white font-bold">Out of Stock</span>
-                    </div>
-                  )}
+      {/* Expanded filters options */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-8"
+          >
+            <div className="bg-[#FCFAF7] rounded-2xl border border-chocolate-200 p-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+              <div>
+                <h4 className="font-bold text-[#3D1E11] mb-2.5">Sourcing Standards</h4>
+                <div className="space-y-2 text-xs text-gray-500 font-semibold">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded border-gray-300 text-chocolate-600" />
+                    <span>Fairtrade Certified</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" defaultChecked className="rounded border-gray-300 text-chocolate-600" />
+                    <span>100% Organic Cacao</span>
+                  </label>
                 </div>
+              </div>
 
-                <div className="p-4 flex flex-col h-[250px]">
-                  <h3 className="text-lg font-bold truncate">{product.name || 'Unnamed Product'}</h3>
-                  <span className="inline-block bg-gray-100 text-[#8B4513] px-3 py-1 rounded-full text-sm my-2">
-                    {product.category || 'Unknown'}
-                  </span>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xl font-semibold">${product.price?.toFixed(2) || '0.00'}</span>
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, index) => (
-                        <FontAwesomeIcon
-                          key={index}
-                          icon={faStar}
-                          className={index < (product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}
-                        />
-                      ))}
-                    </div>
-                  </div>
+              <div>
+                <h4 className="font-bold text-[#3D1E11] mb-2.5">Dietary / Allergens</h4>
+                <div className="space-y-2 text-xs text-gray-500 font-semibold">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" className="rounded border-gray-300 text-chocolate-600" />
+                    <span>Vegan Friendly</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" className="rounded border-gray-300 text-chocolate-600" />
+                    <span>Gluten Free</span>
+                  </label>
                 </div>
-              </Link>
-              <div className="px-4 pb-4">
-                <button
-                  onClick={() => handleAddToCart(product)}
-                  className={`w-full bg-[#8B4513] text-white font-bold py-2 px-4 rounded-lg ${
-                    product.stock === 0 ? 'bg-gray-400' : 'hover:bg-[#A0522D]'
-                  }`}
-                  disabled={product.stock === 0}
-                >
-                  <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
-                  Add to Cart
-                </button>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-[#3D1E11] mb-2.5">Packaging Options</h4>
+                <div className="space-y-2 text-xs text-gray-500 font-semibold">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" className="rounded border-gray-300 text-chocolate-600" />
+                    <span>Gift Ribbon Included</span>
+                  </label>
+                </div>
               </div>
             </div>
-          ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main product catalog grid */}
+      <h2 className="text-2xl font-bold mb-6 text-[#3D1E11]">Chocolate Catalogue</h2>
+      {products.length === 0 ? (
+        <div className="text-center py-20 bg-[#FCFAF7] rounded-3xl border border-dashed border-chocolate-200">
+          <p className="text-gray-500 font-medium">No luxury chocolates match your description.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {products.map((product) => {
+            const isFav = isFavorite(product._id);
+            return (
+              <div
+                key={product._id}
+                className="bg-white rounded-2xl border border-[#FAF6F0] overflow-hidden group shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full relative"
+              >
+                {/* Product Detail Page Link */}
+                <Link to={`/product/${product._id}`} className="flex flex-col flex-grow">
+                  
+                  {/* Image container frame */}
+                  <div className="relative h-52 w-full bg-[#FCFAF7] flex items-center justify-center p-6 overflow-hidden">
+                    <img
+                      src={product.images?.[0] || 'https://via.placeholder.com/300x200?text=Chocolate'}
+                      alt={product.name || 'Product'}
+                      className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500 drop-shadow-md"
+                      onError={() => handleImageError(product._id)}
+                    />
+
+                    {/* Stock status overlay */}
+                    {product.stock === 0 && (
+                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center backdrop-blur-xs">
+                        <span className="bg-red-600 text-white text-[10px] font-black tracking-wider uppercase px-3 py-1 rounded-full shadow-lg">
+                          Out of Stock
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Favorite Button */}
+                    <button
+                      onClick={(e) => handleFavoriteClick(e, product._id)}
+                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center hover:bg-white hover:scale-110 active:scale-95 transition-all z-10"
+                      aria-label="Add to favorites"
+                    >
+                      <FontAwesomeIcon
+                        icon={faHeart}
+                        className={isFav ? 'text-red-500 scale-110 transition-transform' : 'text-gray-400'}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Card textual info */}
+                  <div className="p-5 flex flex-col flex-grow">
+                    <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
+                      <span className="bg-[#3D1E11]/5 px-2.5 py-1 rounded-full font-semibold">{product.category}</span>
+                      
+                      {/* Ratings stars count */}
+                      <div className="flex items-center space-x-1 font-semibold text-gray-700">
+                        <FontAwesomeIcon icon={faStar} className="text-yellow-400" />
+                        <span>{product.rating ? product.rating.toFixed(1) : "New"}</span>
+                      </div>
+                    </div>
+
+                    <h3 className="text-base font-bold text-[#3D1E11] group-hover:text-chocolate-600 transition-colors line-clamp-1 mb-2">
+                      {product.name || 'Unnamed Selection'}
+                    </h3>
+
+                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed flex-grow">
+                      {product.description}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-5 pt-3 border-t border-[#FAF6F0]">
+                      <span className="text-lg font-extrabold text-[#3D1E11]">
+                        ${product.price?.toFixed(2) || '0.00'}
+                      </span>
+
+                      {/* Add to Cart button */}
+                      <button
+                        onClick={(e) => handleAddToCart(e, product)}
+                        disabled={product.stock === 0}
+                        className="bg-[#3D1E11] hover:bg-gold-gradient hover:text-[#2B170E] disabled:bg-gray-200 disabled:text-gray-400 text-[#FCFAF7] w-10 h-10 rounded-full flex items-center justify-center shadow transition-all duration-300 hover:scale-105 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed cursor-pointer"
+                        aria-label="Add to cart"
+                      >
+                        <FontAwesomeIcon icon={faShoppingCart} className="text-xs" />
+                      </button>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
