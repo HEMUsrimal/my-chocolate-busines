@@ -8,7 +8,7 @@
     "server": "nodemon server.js",
     "client": "npm run dev --prefix ../frontend",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "db:init": "node scripts/initDB.js",
+    "db:init": "node scripts/createDbIfNotExists.js && node scripts/initDB.js",
     "db:admin": "node scripts/createAdmin.js",
     "db:check": "node scripts/checkDb.js",
     "create:uploads": "mkdir -p uploads"

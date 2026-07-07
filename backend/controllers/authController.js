@@ -10,29 +10,34 @@ export default function authController({ redisClient, sessionStore }) {
     const { email, password } = req.body;
 
     const loginKey = `login:${req.ip}`;
-    const loginAttempts = await redisClient.incr(loginKey);
+    let loginAttempts = 0;
+    if (redisClient) {
+      loginAttempts = await redisClient.incr(loginKey);
 
-    if (loginAttempts === 1) {
-      await redisClient.expire(loginKey, 300); // 5 mins
-    }
+      if (loginAttempts === 1) {
+        await redisClient.expire(loginKey, 300); // 5 mins
+      }
 
-    if (loginAttempts > 10) {
-      const ttl = await redisClient.ttl(loginKey); // get seconds until reset
-      return res.status(429).json({
-        message: `Too many login attempts. Try again in ${ttl} seconds.`,
-        retryAfter: ttl,
-      });
+      if (loginAttempts > 10) {
+        const ttl = await redisClient.ttl(loginKey); // get seconds until reset
+        return res.status(429).json({
+          message: `Too many login attempts. Try again in ${ttl} seconds.`,
+          retryAfter: ttl,
+        });
+      }
     }
 
     // Retrieve password explicitly using the scope
     const user = await User.scope('withPassword').findOne({ where: { email } });
 
     if (user && (await user.matchPassword(password))) {
-      await redisClient.del(loginKey);
+      if (redisClient) {
+        await redisClient.del(loginKey);
+      }
       generateToken(res, user.id);
 
       const sessionId = req.cookies?.jwt;
-      if (sessionId) {
+      if (sessionId && sessionStore) {
         await sessionStore.set(sessionId, {
           userId: user.id,
           email: user.email,
@@ -77,12 +82,14 @@ export default function authController({ redisClient, sessionStore }) {
 
       // Store session in Redis
       const sessionId = req.cookies.jwt;
-      await sessionStore.set(sessionId, {
-        userId: user.id,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        lastActivity: Date.now()
-      });
+      if (sessionId && sessionStore) {
+        await sessionStore.set(sessionId, {
+          userId: user.id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          lastActivity: Date.now()
+        });
+      }
 
       res.status(201).json({
         _id: user.id,
@@ -102,7 +109,7 @@ export default function authController({ redisClient, sessionStore }) {
   const logoutUser = asyncHandler(async (req, res) => {
     // Clear session from Redis
     const sessionId = req.cookies.jwt;
-    if (sessionId) {
+    if (sessionId && sessionStore) {
       await sessionStore.destroy(sessionId);
     }
 
@@ -122,7 +129,7 @@ export default function authController({ redisClient, sessionStore }) {
     if (user) {
       // Update last activity in session
       const sessionId = req.cookies.jwt;
-      if (sessionId) {
+      if (sessionId && sessionStore) {
         const session = await sessionStore.get(sessionId);
         if (session) {
           session.lastActivity = Date.now();
@@ -159,7 +166,7 @@ export default function authController({ redisClient, sessionStore }) {
 
       // Update session in Redis
       const sessionId = req.cookies.jwt;
-      if (sessionId) {
+      if (sessionId && sessionStore) {
         const session = await sessionStore.get(sessionId);
         if (session) {
           session.email = updatedUser.email;

@@ -15,6 +15,12 @@ const sampleUsers = [
     isAdmin: true,
   },
   {
+    name: 'Admin User 2',
+    email: 'admin2@chocolate.com',
+    password: 'admin123',
+    isAdmin: true,
+  },
+  {
     name: 'John Doe',
     email: 'john@example.com',
     password: 'password123',
@@ -22,6 +28,26 @@ const sampleUsers = [
   {
     name: 'Jane Doe',
     email: 'jane@example.com',
+    password: 'password123',
+  },
+  {
+    name: 'Alice Smith',
+    email: 'alice@example.com',
+    password: 'password123',
+  },
+  {
+    name: 'Bob Johnson',
+    email: 'bob@example.com',
+    password: 'password123',
+  },
+  {
+    name: 'Charlie Brown',
+    email: 'charlie@example.com',
+    password: 'password123',
+  },
+  {
+    name: 'David Miller',
+    email: 'david@example.com',
     password: 'password123',
   },
 ];
@@ -197,6 +223,13 @@ const initDB = async () => {
     const createdProducts = await Product.bulkCreate(sampleProducts);
     console.log(`📦 Seeded ${createdProducts.length} products.`);
 
+    // Helper to calculate past dates
+    const getPastDate = (daysAgo) => {
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      return date;
+    };
+
     // Create sample orders
     const sampleOrders = [
       {
@@ -218,10 +251,176 @@ const initDB = async () => {
         },
         paymentMethod: 'Credit Card',
         itemsPrice: createdProducts[0].price * 2,
-        taxPrice: 0.00,
-        shippingPrice: 0.00,
-        totalPrice: createdProducts[0].price * 2,
+        taxPrice: 2.00,
+        shippingPrice: 4.99,
+        totalPrice: (createdProducts[0].price * 2) + 2.00 + 4.99,
+        isPaid: true,
+        paidAt: getPastDate(15),
+        isDelivered: true,
+        deliveredAt: getPastDate(14),
+        createdAt: getPastDate(15)
       },
+      {
+        userId: createdUsers[2].id,
+        orderItems: [
+          {
+            name: createdProducts[1].name,
+            qty: 1,
+            image: createdProducts[1].images[0],
+            price: createdProducts[1].price,
+            product: createdProducts[1].id,
+          },
+          {
+            name: createdProducts[2].name,
+            qty: 1,
+            image: createdProducts[2].images[0],
+            price: createdProducts[2].price,
+            product: createdProducts[2].id,
+          }
+        ],
+        shippingAddress: {
+          address: '456 Galle Rd',
+          city: 'Kandy',
+          postalCode: '20000',
+          country: 'Sri Lanka',
+        },
+        paymentMethod: 'PayPal',
+        itemsPrice: createdProducts[1].price + createdProducts[2].price,
+        taxPrice: 3.00,
+        shippingPrice: 0.00,
+        totalPrice: createdProducts[1].price + createdProducts[2].price + 3.00,
+        isPaid: true,
+        paidAt: getPastDate(10),
+        isDelivered: true,
+        deliveredAt: getPastDate(9),
+        createdAt: getPastDate(10)
+      },
+      {
+        userId: createdUsers[3].id,
+        orderItems: [
+          {
+            name: createdProducts[4].name,
+            qty: 1,
+            image: createdProducts[4].images[0],
+            price: createdProducts[4].price,
+            product: createdProducts[4].id,
+          }
+        ],
+        shippingAddress: {
+          address: '789 Flower Rd',
+          city: 'Colombo',
+          postalCode: '10700',
+          country: 'Sri Lanka',
+        },
+        paymentMethod: 'Credit Card',
+        itemsPrice: createdProducts[4].price,
+        taxPrice: 5.00,
+        shippingPrice: 0.00,
+        totalPrice: createdProducts[4].price + 5.00,
+        isPaid: true,
+        paidAt: getPastDate(8),
+        isDelivered: false,
+        deliveredAt: null,
+        createdAt: getPastDate(8)
+      },
+      {
+        userId: createdUsers[4].id,
+        orderItems: [
+          {
+            name: createdProducts[5].name,
+            qty: 2,
+            image: createdProducts[5].images[0],
+            price: createdProducts[5].price,
+            product: createdProducts[5].id,
+          }
+        ],
+        shippingAddress: {
+          address: '101 Lake View',
+          city: 'Negombo',
+          postalCode: '11500',
+          country: 'Sri Lanka',
+        },
+        paymentMethod: 'Credit Card',
+        itemsPrice: createdProducts[5].price * 2,
+        taxPrice: 2.40,
+        shippingPrice: 4.99,
+        totalPrice: (createdProducts[5].price * 2) + 2.40 + 4.99,
+        isPaid: false,
+        paidAt: null,
+        isDelivered: false,
+        deliveredAt: null,
+        createdAt: getPastDate(5)
+      },
+      {
+        userId: createdUsers[5].id,
+        orderItems: [
+          {
+            name: createdProducts[6].name,
+            qty: 1,
+            image: createdProducts[6].images[0],
+            price: createdProducts[6].price,
+            product: createdProducts[6].id,
+          },
+          {
+            name: createdProducts[3].name,
+            qty: 2,
+            image: createdProducts[3].images[0],
+            price: createdProducts[3].price,
+            product: createdProducts[3].id,
+          }
+        ],
+        shippingAddress: {
+          address: '202 Temple Rd',
+          city: 'Jaffna',
+          postalCode: '40000',
+          country: 'Sri Lanka',
+        },
+        paymentMethod: 'PayPal',
+        itemsPrice: createdProducts[6].price + (createdProducts[3].price * 2),
+        taxPrice: 4.20,
+        shippingPrice: 0.00,
+        totalPrice: createdProducts[6].price + (createdProducts[3].price * 2) + 4.20,
+        isPaid: true,
+        paidAt: getPastDate(3),
+        isDelivered: true,
+        deliveredAt: getPastDate(2),
+        createdAt: getPastDate(3)
+      },
+      {
+        userId: createdUsers[6].id,
+        orderItems: [
+          {
+            name: createdProducts[8].name,
+            qty: 1,
+            image: createdProducts[8].images[0],
+            price: createdProducts[8].price,
+            product: createdProducts[8].id,
+          },
+          {
+            name: createdProducts[9].name,
+            qty: 1,
+            image: createdProducts[9].images[0],
+            price: createdProducts[9].price,
+            product: createdProducts[9].id,
+          }
+        ],
+        shippingAddress: {
+          address: '303 Beach Rd',
+          city: 'Galle',
+          postalCode: '80000',
+          country: 'Sri Lanka',
+        },
+        paymentMethod: 'Credit Card',
+        itemsPrice: createdProducts[8].price + createdProducts[9].price,
+        taxPrice: 2.60,
+        shippingPrice: 4.99,
+        totalPrice: createdProducts[8].price + createdProducts[9].price + 2.60 + 4.99,
+        isPaid: true,
+        paidAt: getPastDate(1),
+        isDelivered: false,
+        deliveredAt: null,
+        createdAt: getPastDate(1)
+      }
     ];
 
     await Order.bulkCreate(sampleOrders);
@@ -241,6 +440,24 @@ const initDB = async () => {
         rating: 4,
         comment: 'Great milk chocolate, very creamy.',
       },
+      {
+        userId: createdUsers[3].id,
+        productId: createdProducts[0].id,
+        rating: 5,
+        comment: 'Absolutely love the 70% cocoa intensity!',
+      },
+      {
+        userId: createdUsers[4].id,
+        productId: createdProducts[4].id,
+        rating: 5,
+        comment: 'This gift box was the perfect present. Beautiful packaging!',
+      },
+      {
+        userId: createdUsers[5].id,
+        productId: createdProducts[5].id,
+        rating: 4,
+        comment: 'The orange flavor combination is delicious.',
+      }
     ];
 
     const createdReviews = await Review.bulkCreate(sampleReviews);

@@ -42,22 +42,38 @@ const Order = sequelize.define('Order', {
   itemsPrice: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0.00
+    defaultValue: 0.00,
+    get() {
+      const value = this.getDataValue('itemsPrice');
+      return value === null ? null : parseFloat(value);
+    }
   },
   taxPrice: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0.00
+    defaultValue: 0.00,
+    get() {
+      const value = this.getDataValue('taxPrice');
+      return value === null ? null : parseFloat(value);
+    }
   },
   shippingPrice: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0.00
+    defaultValue: 0.00,
+    get() {
+      const value = this.getDataValue('shippingPrice');
+      return value === null ? null : parseFloat(value);
+    }
   },
   totalPrice: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    defaultValue: 0.00
+    defaultValue: 0.00,
+    get() {
+      const value = this.getDataValue('totalPrice');
+      return value === null ? null : parseFloat(value);
+    }
   },
   isPaid: {
     type: DataTypes.BOOLEAN,
