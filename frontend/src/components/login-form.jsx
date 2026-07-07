@@ -67,7 +67,7 @@ export function LoginForm({ className, ...props }) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
                   title="Please enter a valid email address"
                   className="rounded-xl border-chocolate-200 px-4 py-2.5 focus:border-[#3D1E11] focus:ring-1 focus:ring-[#3D1E11]"
                 />

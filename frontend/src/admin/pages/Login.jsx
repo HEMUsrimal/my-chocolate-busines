@@ -27,7 +27,7 @@ const AdminLogin = () => {
     try {
       const response = await adminApi.login(formData);
       localStorage.setItem('token', response.data.token);
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } catch (error) {
       console.error('Login error:', error);
       setError(error.response?.data?.message || 'Failed to login. Please try again.');

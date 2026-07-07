@@ -28,7 +28,7 @@ export const protect = asyncHandler(async (req, res, next) => {
     });
 
     // Get user from token
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findByPk(decoded.id);
 
     if (!user) {
       res.status(401);

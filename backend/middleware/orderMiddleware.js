@@ -4,7 +4,7 @@ const orderMiddleware = {
     getOrderById: async (req, res, next) => {
         const orderId = req.params.id;
         try {
-            const order = await Order.findById(orderId);
+            const order = await Order.findByPk(orderId);
             if (!order) {
                 return res.status(404).json({ message: "Order not found" });
             }
@@ -21,7 +21,7 @@ const orderMiddleware = {
             return res.status(400).json({ message: "Missing user or order information" });
         }
 
-        if (req.order.user.toString() !== req.user._id.toString()) {
+        if (req.order.userId.toString() !== req.user.id.toString()) {
             return res.status(403).json({ message: "You do not have permission to access this order" });
         }
 

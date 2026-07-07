@@ -1,34 +1,59 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import User from './User.js';
+import Product from './Product.js';
 
-const reviewSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Review = sequelize.define('Review', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true
+  _id: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.id;
+    }
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: User,
+      key: 'id'
+    }
+  },
+  productId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: Product,
+      key: 'id'
+    }
   },
   rating: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 5
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: 1,
+      max: 5
+    }
   },
   comment: {
-    type: String,
-    required: true,
-    trim: true
+    type: DataTypes.TEXT,
+    allowNull: false
   }
 }, {
-  timestamps: true
+  indexes: [
+    {
+      unique: true,
+      fields: ['userId', 'productId']
+    }
+  ]
 });
 
-// Create a compound index to ensure a user can only review a product once
-reviewSchema.index({ user: 1, product: 1 }, { unique: true });
+// Associations
+Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
-const Review = mongoose.model('Review', reviewSchema);
-
-export default Review; 
+export default Review;

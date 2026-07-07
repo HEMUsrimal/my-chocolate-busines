@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { adminApi } from '../../utils/api';
 import {
   LayoutDashboard,
   Users,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const AdminSidebar = () => {
+  const navigate = useNavigate();
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
     { icon: Users, label: 'Users', path: '/admin/users' },
@@ -43,8 +45,17 @@ const AdminSidebar = () => {
 
       <div className="mt-auto pt-8">
         <button
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-red-600 transition-colors"
-          onClick={() => {/* Add logout logic */}}
+          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+          onClick={async () => {
+            try {
+              await adminApi.logout();
+            } catch (err) {
+              console.error('Logout error:', err);
+            } finally {
+              localStorage.removeItem('token');
+              navigate('/admin/login');
+            }
+          }}
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>

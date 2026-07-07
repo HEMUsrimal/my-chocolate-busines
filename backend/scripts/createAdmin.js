@@ -1,7 +1,6 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from '../models/User.js';
-import connectDB from '../config/db.js';
+import connectDB, { sequelize } from '../config/db.js';
 
 dotenv.config();
 
@@ -16,9 +15,10 @@ const createAdminUser = async () => {
       isAdmin: true,
     };
 
-    const existingAdmin = await User.findOne({ email: adminUser.email });
+    const existingAdmin = await User.findOne({ where: { email: adminUser.email } });
     if (existingAdmin) {
       console.log('Admin user already exists');
+      if (sequelize) await sequelize.close();
       process.exit(0);
     }
 
@@ -29,6 +29,7 @@ const createAdminUser = async () => {
       isAdmin: user.isAdmin,
     });
 
+    if (sequelize) await sequelize.close();
     process.exit(0);
   } catch (error) {
     console.error('Error:', error);
@@ -36,4 +37,4 @@ const createAdminUser = async () => {
   }
 };
 
-createAdminUser(); 
+createAdminUser();

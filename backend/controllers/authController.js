@@ -7,122 +7,129 @@ export default function authController({ redisClient, sessionStore }) {
   // @route   POST /api/auth/login
   // @access  Public
   const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  const loginKey = `login:${req.ip}`;
-  const loginAttempts = await redisClient.incr(loginKey);
+    const loginKey = `login:${req.ip}`;
+    let loginAttempts = 0;
+    if (redisClient) {
+      loginAttempts = await redisClient.incr(loginKey);
 
-  if (loginAttempts === 1) {
-    await redisClient.expire(loginKey, 300); // 5 mins
-  }
+      if (loginAttempts === 1) {
+        await redisClient.expire(loginKey, 300); // 5 mins
+      }
 
-  if (loginAttempts > 10) {
-    const ttl = await redisClient.ttl(loginKey); // get seconds until reset
-    return res.status(429).json({
-      message: `Too many login attempts. Try again in ${ttl} seconds.`,
-      retryAfter: ttl,
-    });
-  }
-
-  const user = await User.findOne({ email }).select('+password');
-
-  if (user && (await user.matchPassword(password))) {
-    await redisClient.del(loginKey);
-    generateToken(res, user._id);
-
-    const sessionId = req.cookies?.jwt;
-    if (sessionId) {
-      await sessionStore.set(sessionId, {
-        userId: user._id,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        lastActivity: Date.now(),
-      });
+      if (loginAttempts > 10) {
+        const ttl = await redisClient.ttl(loginKey); // get seconds until reset
+        return res.status(429).json({
+          message: `Too many login attempts. Try again in ${ttl} seconds.`,
+          retryAfter: ttl,
+        });
+      }
     }
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-    });
-  } else {
-    res.status(401);
-    throw new Error('Invalid email or password');
-  }
-});
+    // Retrieve password explicitly using the scope
+    const user = await User.scope('withPassword').findOne({ where: { email } });
 
+    if (user && (await user.matchPassword(password))) {
+      if (redisClient) {
+        await redisClient.del(loginKey);
+      }
+      generateToken(res, user.id);
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+      const sessionId = req.cookies?.jwt;
+      if (sessionId && sessionStore) {
+        await sessionStore.set(sessionId, {
+          userId: user.id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          lastActivity: Date.now(),
+        });
+      }
 
-  const userExists = await User.findOne({ email });
-
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
-  }
-
-  const user = await User.create({
-    name,
-    email,
-    password,
+      res.json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+      });
+    } else {
+      res.status(401);
+      throw new Error('Invalid email or password');
+    }
   });
 
-  if (user) {
-      generateToken(res, user._id);
+  // @desc    Register a new user
+  // @route   POST /api/auth/register
+  // @access  Public
+  const registerUser = asyncHandler(async (req, res) => {
+    const { name, email, password } = req.body;
+
+    const userExists = await User.findOne({ where: { email } });
+
+    if (userExists) {
+      res.status(400);
+      throw new Error('User already exists');
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+    });
+
+    if (user) {
+      generateToken(res, user.id);
 
       // Store session in Redis
       const sessionId = req.cookies.jwt;
-      await sessionStore.set(sessionId, {
-        userId: user._id,
+      if (sessionId && sessionStore) {
+        await sessionStore.set(sessionId, {
+          userId: user.id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          lastActivity: Date.now()
+        });
+      }
+
+      res.status(201).json({
+        _id: user.id,
+        name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
-        lastActivity: Date.now()
       });
+    } else {
+      res.status(400);
+      throw new Error('Invalid user data');
+    }
+  });
 
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-    });
-  } else {
-    res.status(400);
-    throw new Error('Invalid user data');
-  }
-});
-
-// @desc    Logout user / clear cookie
-// @route   POST /api/auth/logout
-// @access  Private
-const logoutUser = asyncHandler(async (req, res) => {
+  // @desc    Logout user / clear cookie
+  // @route   POST /api/auth/logout
+  // @access  Private
+  const logoutUser = asyncHandler(async (req, res) => {
     // Clear session from Redis
     const sessionId = req.cookies.jwt;
-    if (sessionId) {
+    if (sessionId && sessionStore) {
       await sessionStore.destroy(sessionId);
     }
 
-  res.cookie('jwt', '', {
-    httpOnly: true,
-    expires: new Date(0),
+    res.cookie('jwt', '', {
+      httpOnly: true,
+      expires: new Date(0),
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
   });
-  res.status(200).json({ message: 'Logged out successfully' });
-});
 
   // @desc    Get user profile
   // @route   GET /api/auth/profile
-// @access  Private
+  // @access  Private
   const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+    const user = await User.findByPk(req.user.id);
 
-  if (user) {
+    if (user) {
       // Update last activity in session
       const sessionId = req.cookies.jwt;
-      if (sessionId) {
+      if (sessionId && sessionStore) {
         const session = await sessionStore.get(sessionId);
         if (session) {
           session.lastActivity = Date.now();
@@ -130,23 +137,23 @@ const logoutUser = asyncHandler(async (req, res) => {
         }
       }
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-    });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
-  }
-});
+      res.json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+      });
+    } else {
+      res.status(404);
+      throw new Error('User not found');
+    }
+  });
 
   // @desc    Update user profile
   // @route   PUT /api/auth/profile
   // @access  Private
   const updateUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id);
+    const user = await User.findByPk(req.user.id);
 
     if (user) {
       user.name = req.body.name || user.name;
@@ -159,7 +166,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
       // Update session in Redis
       const sessionId = req.cookies.jwt;
-      if (sessionId) {
+      if (sessionId && sessionStore) {
         const session = await sessionStore.get(sessionId);
         if (session) {
           session.email = updatedUser.email;
@@ -169,7 +176,7 @@ const logoutUser = asyncHandler(async (req, res) => {
       }
 
       res.json({
-        _id: updatedUser._id,
+        _id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
         isAdmin: updatedUser.isAdmin,
@@ -184,7 +191,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   // @route   GET /api/auth/users
   // @access  Private/Admin
   const getUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({});
+    const users = await User.findAll({});
     res.json(users);
   });
 
@@ -192,14 +199,14 @@ const logoutUser = asyncHandler(async (req, res) => {
   // @route   DELETE /api/auth/users/:id
   // @access  Private/Admin
   const deleteUser = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByPk(req.params.id);
 
     if (user) {
       if (user.isAdmin) {
         res.status(400);
         throw new Error('Can not delete admin user');
       }
-      await user.deleteOne();
+      await user.destroy();
       res.json({ message: 'User removed' });
     } else {
       res.status(404);
@@ -209,11 +216,11 @@ const logoutUser = asyncHandler(async (req, res) => {
 
   return {
     loginUser,
-  registerUser,
-  logoutUser,
+    registerUser,
+    logoutUser,
     getUserProfile,
     updateUserProfile,
     getUsers,
     deleteUser
-};
+  };
 }

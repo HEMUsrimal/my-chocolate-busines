@@ -1,50 +1,63 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const productSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-    },
-    category: {
-      type: String,
-      required: true,
-      enum: ['Dark Chocolate', 'Milk Chocolate', 'Nut Chocolate', 'White Chocolate', 'Gift Box'],
-    },
-    price: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    stock: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-    images: [{
-      type: String,
-      required: true,
-    }],
-    rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
-    },
-    numReviews: {
-      type: Number,
-      default: 0
+const Product = sequelize.define('Product', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  _id: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.id;
     }
   },
-  {
-    timestamps: true,
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  category: {
+    type: DataTypes.ENUM('Dark Chocolate', 'Milk Chocolate', 'Nut Chocolate', 'White Chocolate', 'Gift Box'),
+    allowNull: false
+  },
+  price: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0.00,
+    get() {
+      const value = this.getDataValue('price');
+      return value === null ? null : parseFloat(value);
+    }
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  stock: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  images: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  rating: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 5
+    }
+  },
+  numReviews: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   }
-);
+});
 
-const Product = mongoose.model('Product', productSchema);
-
-export default Product; 
+export default Product;
