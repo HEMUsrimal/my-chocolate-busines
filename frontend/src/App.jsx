@@ -16,14 +16,12 @@ import MyOrders from "./pages/MyOrders";
 import Settings from "./pages/Settings";
 import Product from "./pages/Product";
 import Dashboard from "./admin/Dashboard";
-import AddProduct from "./admin/AddProduct";
-import Overview from "./admin/Overview";
-import Admin from "./admin/Admin";
 import AdminLayout from './admin/layouts/AdminLayout';
 import Users from './admin/pages/Users';
 import Products from './admin/pages/Products';
 import Orders from './admin/pages/Orders';
 import Analytics from './admin/pages/Analytics';
+import AdminLogin from './admin/pages/Login';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -40,6 +38,14 @@ const ProtectedRoute = ({ children }) => {
   //   return <Navigate to="/login" />;
   // }
 
+  return children;
+};
+
+const AdminProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
   return children;
 };
 
@@ -164,7 +170,22 @@ function App() {
                 }
               />
               {/* Admin Routes (with nested layout) */}
-              <Route path="/admin" element={<AdminLayout />}>
+              <Route
+                path="/admin/login"
+                element={
+                  <NonAuthenticatedLayout>
+                    <AdminLogin />
+                  </NonAuthenticatedLayout>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AdminProtectedRoute>
+                    <AdminLayout />
+                  </AdminProtectedRoute>
+                }
+              >
                 <Route index element={<Dashboard />} />
                 <Route path="users" element={<Users />} />
                 <Route path="products" element={<Products />} />

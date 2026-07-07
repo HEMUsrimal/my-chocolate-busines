@@ -6,7 +6,6 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import session from "express-session";
-import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -21,7 +20,7 @@ dotenv.config();
 const app = express();
 
 // Connect to MongoDB
-connectDB();
+await connectDB();
 
 // Cookie parser for handling cookies
 app.use(cookieParser());
@@ -50,7 +49,7 @@ app.use(cors({
 // Session middleware
 app.use(session({
   store: sessionStore,
-  secret: process.env.JWT_SECRET,
+  secret: process.env.JWT_SECRET || 'dev-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {

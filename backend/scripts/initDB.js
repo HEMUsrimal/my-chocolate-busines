@@ -10,8 +10,8 @@ dotenv.config();
 const sampleUsers = [
   {
     name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'password123',
+    email: 'admin@chocolate.com',
+    password: 'admin123',
     isAdmin: true,
   },
   {
