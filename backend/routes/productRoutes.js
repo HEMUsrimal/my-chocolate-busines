@@ -1,6 +1,6 @@
 import express from 'express';
 import productController from '../controllers/productController.js';
-import { protect, admin } from '../middleware/authMiddleware.js';
+import { protect, admin, seller } from '../middleware/authMiddleware.js';
 import Product from '../models/Product.js';
 
 export default function createProductRouter(redisObjects) {
@@ -38,14 +38,14 @@ router.get('/:id', getProductById);
 
 // Product CRUD
 router.route('/')
-  .post(protect, admin, createProduct);
+  .post(protect, seller, createProduct);
 
 router.route('/:id/reviews')
   .post(protect, createProductReview);
 
 router.route('/:id')
-  .put(protect, admin, updateProduct)
-  .delete(protect, admin, deleteProduct);
+  .put(protect, seller, updateProduct)
+  .delete(protect, seller, deleteProduct);
 
   return router;
 }

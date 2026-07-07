@@ -34,7 +34,7 @@ export default function authController({ redisClient, sessionStore }) {
       if (redisClient) {
         await redisClient.del(loginKey);
       }
-      generateToken(res, user.id);
+      const token = generateToken(res, user.id);
 
       const sessionId = req.cookies?.jwt;
       if (sessionId && sessionStore) {
@@ -51,6 +51,8 @@ export default function authController({ redisClient, sessionStore }) {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        isSeller: user.isSeller,
+        token,
       });
     } else {
       res.status(401);
@@ -78,7 +80,7 @@ export default function authController({ redisClient, sessionStore }) {
     });
 
     if (user) {
-      generateToken(res, user.id);
+      const token = generateToken(res, user.id);
 
       // Store session in Redis
       const sessionId = req.cookies.jwt;
@@ -96,6 +98,8 @@ export default function authController({ redisClient, sessionStore }) {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        isSeller: user.isSeller,
+        token,
       });
     } else {
       res.status(400);

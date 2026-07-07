@@ -21,6 +21,12 @@ const sampleUsers = [
     isAdmin: true,
   },
   {
+    name: 'Seller User',
+    email: 'seller@chocolate.com',
+    password: 'seller123',
+    isSeller: true,
+  },
+  {
     name: 'John Doe',
     email: 'john@example.com',
     password: 'password123',

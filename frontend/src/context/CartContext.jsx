@@ -3,33 +3,23 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (error) {
+      console.error('Error parsing cart from localStorage:', error);
+      return [];
+    }
+  });
   const [totalItems, setTotalItems] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
 
-  // Load cart from localStorage on initial render
+  // Save cart to localStorage and calculate totals whenever it changes
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    console.log('Loading cart from localStorage:', savedCart);
-    if (savedCart) {
-      const parsedCart = JSON.parse(savedCart);
-      setCart(parsedCart);
-      // Calculate initial totals
-      const items = parsedCart.reduce((total, item) => total + item.quantity, 0);
-      const price = parsedCart.reduce((total, item) => total + (item.price * item.quantity), 0);
-      setTotalItems(items);
-      setTotalPrice(price);
-    }
-  }, []);
-
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    console.log('Cart updated:', cart);
     localStorage.setItem('cart', JSON.stringify(cart));
-    // Calculate totals
     const items = cart.reduce((total, item) => total + item.quantity, 0);
     const price = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    console.log('New totals - Items:', items, 'Price:', price);
     setTotalItems(items);
     setTotalPrice(price);
   }, [cart]);

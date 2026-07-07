@@ -26,8 +26,14 @@ const AdminLogin = () => {
 
     try {
       const response = await adminApi.login(formData);
-      localStorage.setItem('token', response.data.token);
-      navigate('/admin');
+      const user = response.data;
+      if (user.isAdmin || user.isSeller) {
+        localStorage.setItem('token', user.token);
+        localStorage.setItem('user', JSON.stringify(user));
+        navigate('/admin');
+      } else {
+        setError('Access denied. Only Admins and Sellers are allowed to access this portal.');
+      }
     } catch (error) {
       console.error('Login error:', error);
       setError(error.response?.data?.message || 'Failed to login. Please try again.');

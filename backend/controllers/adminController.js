@@ -169,7 +169,7 @@ export default function adminController({ redisClient, sessionStore, invalidateC
   // @route   POST /api/admin/users
   // @access  Private/Admin
   const registerUser = asyncHandlerMiddleware(async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, isAdmin, isSeller } = req.body;
 
     const userExists = await User.findOne({ where: { email } });
 
@@ -182,6 +182,8 @@ export default function adminController({ redisClient, sessionStore, invalidateC
       name,
       email,
       password,
+      isAdmin: Boolean(isAdmin),
+      isSeller: Boolean(isSeller),
     });
 
     if (user) {
@@ -190,6 +192,7 @@ export default function adminController({ redisClient, sessionStore, invalidateC
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        isSeller: user.isSeller,
       });
     } else {
       res.status(400);
@@ -207,6 +210,7 @@ export default function adminController({ redisClient, sessionStore, invalidateC
       user.name = req.body.name || user.name;
       user.email = req.body.email || user.email;
       user.isAdmin = req.body.isAdmin !== undefined ? Boolean(req.body.isAdmin) : user.isAdmin;
+      user.isSeller = req.body.isSeller !== undefined ? Boolean(req.body.isSeller) : user.isSeller;
 
       const updatedUser = await user.save();
 
@@ -215,6 +219,7 @@ export default function adminController({ redisClient, sessionStore, invalidateC
         name: updatedUser.name,
         email: updatedUser.email,
         isAdmin: updatedUser.isAdmin,
+        isSeller: updatedUser.isSeller,
       });
     } else {
       res.status(404);

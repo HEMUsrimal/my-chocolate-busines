@@ -203,7 +203,9 @@ export default function productController({ invalidateCache }) {
 
     if (product) {
       product.name = name || product.name;
-      product.price = price !== undefined ? price : product.price;
+      if (req.user && req.user.isAdmin) {
+        product.price = price !== undefined ? price : product.price;
+      }
       product.description = description || product.description;
       product.images = images || product.images;
       product.category = category || product.category;

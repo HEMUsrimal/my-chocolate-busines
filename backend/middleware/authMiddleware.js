@@ -90,4 +90,24 @@ export const admin = asyncHandler(async (req, res, next) => {
 
   next();
 });
+
+// Seller middleware (allows both sellers and admins)
+export const seller = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    res.status(401);
+    throw new Error('Not authorized, no user found');
+  }
+
+  if (!req.user.isSeller && !req.user.isAdmin) {
+    res.status(403);
+    throw new Error('Not authorized as a seller');
+  }
+
+  if (!req.user.isActive) {
+    res.status(403);
+    throw new Error('Seller account is deactivated');
+  }
+
+  next();
+});
   
