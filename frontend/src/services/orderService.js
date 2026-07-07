@@ -1,37 +1,45 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = import.meta.env.VITE_API_URL + '/orders' || 'http://localhost:8000/api/orders';
+// Create a new order
+export const createOrder = async (orderData) => {
+  try {
+    const response = await api.post('/orders', orderData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating order:', error);
+    throw error;
+  }
+};
 
-// Create axios instance with default config
-const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+// Fetch current user's orders
+export const getMyOrders = async () => {
+  try {
+    const response = await api.get('/orders/myorders');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching my orders:', error);
+    throw error;
+  }
+};
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      console.error('API Error:', error.response?.data || error.message);
-      return Promise.reject(error);
-    }
-  );
+// Fetch single order by ID
+export const getOrderById = async (id) => {
+  try {
+    const response = await api.get(`/orders/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching order by ID:', error);
+    throw error;
+  }
+};
 
+// Fetch all orders (admin only)
 export const getOrders = async () => {
   try {
-    console.log('Fetching orders from:', API_URL);
     const response = await api.get('/orders');
-    console.log('Orders fetched successfully:', response.data);
-    
-    // Handle paginated response
-    if (response.data && response.data.products) {
-      return response.data.products;
-    }
-    return [];
+    return response.data;
   } catch (error) {
-    console.error('Error fetching products:', error);
-    return [];
+    console.error('Error fetching all orders:', error);
+    throw error;
   }
 };
