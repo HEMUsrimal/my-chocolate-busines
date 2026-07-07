@@ -19,7 +19,7 @@ dotenv.config();
 
 const app = express();
 
-// Connect to MongoDB
+// Connect to Database (MySQL)
 await connectDB();
 
 // Cookie parser for handling cookies

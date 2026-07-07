@@ -8,7 +8,7 @@ A full-stack e-commerce web application built with the MERN stack (MongoDB, Expr
 
 - **Frontend**: React + Vite + TailwindCSS
 - **Backend**: Node.js + Express
-- **Database**: MongoDB (commented out for now, ready for integration)
+- **Database**: MySQL (via Sequelize ORM)
 - **Cache**: Redis
 - **Web Server**: NGINX
 - **Containerization**: Docker + Docker Compose
@@ -32,8 +32,10 @@ chocolate-bravo/
 - Node.js (v18.x LTS recommended)
 - npm (comes with Node.js)
 - Git
-- Docker (for containerization)
-- Kubernetes (for orchestration, e.g., minikube, kind, or a cloud provider)
+- MySQL Server (v8.x recommended, running locally or via a Docker container)
+- Redis Server (v7.x recommended, running locally or via a Docker container)
+- Docker (optional, for containerization)
+- Kubernetes (optional, for orchestration, e.g., minikube, kind)
 
 ## Environment Variables
 
@@ -47,12 +49,15 @@ Create a `.env` file in the `backend` directory with the following variables:
 NODE_ENV=development
 PORT=8000
 
-# MongoDB Configuration
-MONGO_URI=
-
+# MySQL Configuration
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=
+MYSQL_DATABASE=chocolate_db
 
 # JWT Configuration
-JWT_SECRET =
+JWT_SECRET=dev-secret-key-12345
 JWT_EXPIRES_IN=24h
 
 # Redis Configuration
@@ -107,38 +112,58 @@ NODE_ENV=development
 **Note:**
 - The backend and frontend each require their own `.env` files, but all configuration is documented here for clarity.
 
-## Installation
+## Installation and Local Setup
 
-### Backend Setup
+You can run the frontend and backend servers together concurrently, or start them individually.
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file as described above.
-4. Start the backend server:
-   ```bash
-   npm start
-   ```
+### Step 1: Install Dependencies
+Run `npm install` in both the backend and frontend directories:
+```bash
+# Install backend dependencies
+cd backend
+npm install
 
-### Frontend Setup
+# Install frontend dependencies
+cd ../frontend
+npm install
+cd ..
+```
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the frontend development server:
-   ```bash
-   npm run dev
-   ```
+### Step 2: Configure Environment Variables
+Create `.env` files in both the `backend/` and `frontend/` directories using the variables documented in the [Environment Variables](#environment-variables) section.
+
+### Step 3: Initialize & Seed the Database
+Ensure your MySQL server is running and the database name configured (`chocolate_db` by default) exists. Run the following command inside the `backend` directory to initialize tables and import sample data:
+```bash
+cd backend
+npm run db:init
+```
+
+### Step 4: Run the Application
+
+#### Option A: Running Concurrently (Recommended)
+You can start both the backend server and the frontend React application with a single command from the `backend/` directory:
+```bash
+cd backend
+npm run dev
+```
+This runs Nodemon for the backend server on `http://localhost:8000` and Vite for the frontend on `http://localhost:5173`.
+
+#### Option B: Running Separately
+If you want to run them in separate terminal windows/tabs:
+
+* **Backend**:
+  ```bash
+  cd backend
+  npm run server   # starts with nodemon
+  # or
+  npm start       # starts with node
+  ```
+* **Frontend**:
+  ```bash
+  cd frontend
+  npm run dev      # starts the Vite development server
+  ```
 
 ## Docker Usage
 
@@ -149,7 +174,8 @@ docker-compose up --build
 ```
 
 - Make sure to set up your `.env` file in the backend directory before building.
-- The `docker-compose.yml` file will set up the backend, frontend, Redis, and MongoDB containers.
+- The `docker-compose.yml` file will set up the backend, frontend, Redis, and Nginx containers.
+- **Note**: The current `docker-compose.yml` does not spin up a MySQL database container. Make sure your local MySQL instance is running and accessible (e.g., using `MYSQL_HOST=host.docker.internal` in `backend/.env` on Mac/Windows to let Docker containers connect to your host's MySQL port).
 
 ## Kubernetes Usage
 
@@ -175,17 +201,30 @@ kubectl apply -k k8s/
 
 ## Backend Utility Scripts
 
-In `backend/scripts/`:
-- `install-redis.sh`: Script to install Redis locally (Linux/Mac).
-- `initDB.js`: Initialize the database with seed data.
-- `createAdmin.js`: Create an admin user.
-- `checkDb.js`: Check MongoDB connection.
+In the `backend` directory, you can run the following helper npm scripts for database management and setup:
 
-Run with:
-```bash
-node scripts/initDB.js
-node scripts/createAdmin.js
-```
+* **Initialize/Seed Database**:
+  ```bash
+  npm run db:init
+  ```
+  Syncs all Sequelize models to the database (creates tables) and populates them with sample users, products, orders, and reviews.
+
+* **Create Admin User**:
+  ```bash
+  npm run db:admin
+  ```
+  Creates or updates a default administrator account.
+
+* **Check Database Connection**:
+  ```bash
+  npm run db:check
+  ```
+  Tests connection to the MySQL database and lists sample data.
+
+* **Install Redis Locally (Linux/Mac)**:
+  ```bash
+  bash scripts/install-redis.sh
+  ```
 
 ## Node.js Version Compatibility
 
