@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import connectDB, { sequelize } from '../config/db.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
@@ -183,31 +183,31 @@ const sampleProducts = [
 
 const initDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    await connectDB();
 
-    // Clear existing collections
-    await User.deleteMany({});
-    await Product.deleteMany({});
-    await Order.deleteMany({});
-    await Review.deleteMany({});
+    // Re-syncing database tables (dropping and recreating)
+    await sequelize.sync({ force: true });
+    console.log('🗑️ Cleaned database tables.');
 
-    // Create users
-    const createdUsers = await User.insertMany(sampleUsers);
+    // Create users (enable hooks for bcrypt hashing)
+    const createdUsers = await User.bulkCreate(sampleUsers, { individualHooks: true });
+    console.log(`👤 Seeded ${createdUsers.length} users.`);
 
     // Create products
-    const createdProducts = await Product.insertMany(sampleProducts);
+    const createdProducts = await Product.bulkCreate(sampleProducts);
+    console.log(`📦 Seeded ${createdProducts.length} products.`);
 
     // Create sample orders
     const sampleOrders = [
       {
-        user: createdUsers[1]._id,
+        userId: createdUsers[1].id,
         orderItems: [
           {
             name: createdProducts[0].name,
             qty: 2,
             image: createdProducts[0].images[0],
             price: createdProducts[0].price,
-            product: createdProducts[0]._id,
+            product: createdProducts[0].id,
           },
         ],
         shippingAddress: {
@@ -218,56 +218,60 @@ const initDB = async () => {
         },
         paymentMethod: 'Credit Card',
         itemsPrice: createdProducts[0].price * 2,
-        taxPrice: 0,
-        shippingPrice: 0,
+        taxPrice: 0.00,
+        shippingPrice: 0.00,
         totalPrice: createdProducts[0].price * 2,
       },
     ];
 
-    await Order.insertMany(sampleOrders);
+    await Order.bulkCreate(sampleOrders);
+    console.log('🛒 Seeded orders.');
 
     // Create sample reviews
     const sampleReviews = [
       {
-        user: createdUsers[1]._id,
-        product: createdProducts[0]._id,
+        userId: createdUsers[1].id,
+        productId: createdProducts[0].id,
         rating: 5,
         comment: 'Excellent chocolate! Very rich and smooth.',
       },
       {
-        user: createdUsers[2]._id,
-        product: createdProducts[1]._id,
+        userId: createdUsers[2].id,
+        productId: createdProducts[1].id,
         rating: 4,
         comment: 'Great milk chocolate, very creamy.',
       },
     ];
 
-    // Insert reviews
-    const createdReviews = await Review.insertMany(sampleReviews);
+    const createdReviews = await Review.bulkCreate(sampleReviews);
+    console.log('⭐️ Seeded reviews.');
 
     // Update product ratings and review counts
     for (const product of createdProducts) {
       const productReviews = createdReviews.filter(review => 
-        review.product.toString() === product._id.toString()
+        review.productId === product.id
       );
       
       if (productReviews.length > 0) {
         const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
         const averageRating = totalRating / productReviews.length;
         
-        await Product.findByIdAndUpdate(product._id, {
+        await Product.update({
           rating: averageRating,
           numReviews: productReviews.length
+        }, {
+          where: { id: product.id }
         });
       }
     }
 
-    console.log('Database initialized successfully!');
-    process.exit();
+    console.log('🚀 Database initialized successfully!');
+    if (sequelize) await sequelize.close();
+    process.exit(0);
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('❌ Error initializing database:', error);
     process.exit(1);
   }
 };
 
-initDB(); 
+initDB();

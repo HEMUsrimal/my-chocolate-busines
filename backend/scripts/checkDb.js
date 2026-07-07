@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import connectDB from '../config/db.js';
+import connectDB, { sequelize } from '../config/db.js';
 import Product from '../models/Product.js';
 
 dotenv.config();
@@ -9,11 +9,11 @@ const checkDatabase = async () => {
     await connectDB();
     console.log('🔍 Checking database...');
 
-    const count = await Product.countDocuments();
+    const count = await Product.count();
     console.log(`📊 Total products in database: ${count}`);
 
     if (count > 0) {
-      const products = await Product.find().limit(3);
+      const products = await Product.findAll({ limit: 3 });
       console.log('\n📦 Sample products:');
       products.forEach((product, index) => {
         console.log(`\nProduct ${index + 1}:`);
@@ -23,6 +23,7 @@ const checkDatabase = async () => {
       console.log('❌ No products found in database');
     }
 
+    if (sequelize) await sequelize.close();
     process.exit();
   } catch (error) {
     console.error('❌ Error:', error);
@@ -30,4 +31,4 @@ const checkDatabase = async () => {
   }
 };
 
-checkDatabase(); 
+checkDatabase();

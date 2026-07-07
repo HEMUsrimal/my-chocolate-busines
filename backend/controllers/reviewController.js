@@ -1,48 +1,59 @@
 import Review from '../models/Review.js';
 import Product from '../models/Product.js';
+import User from '../models/User.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 
 export default function reviewController({ invalidateCache }) {
-// Get reviews for a product
+  // Get reviews for a product
   const getProductReviews = asyncHandler(async (req, res) => {
-    const reviews = await Review.find({ product: req.params.productId })
-      .populate('user', 'name')
-      .sort({ createdAt: -1 });
-    res.json(reviews);
+    const reviews = await Review.findAll({
+      where: { productId: req.params.productId },
+      include: [{ model: User, as: 'user', attributes: ['name'] }],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    // Format response to include standard Mongoose _id mapping
+    const transformed = reviews.map(r => ({
+      _id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      user: r.user,
+      createdAt: r.createdAt
+    }));
+    
+    res.json(transformed);
   });
 
-// Add a review
+  // Add a review
   const addReview = asyncHandler(async (req, res) => {
     const { rating, comment } = req.body;
     const productId = req.params.productId;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     // Check if product exists
-    const product = await Product.findById(productId);
+    const product = await Product.findByPk(productId);
     if (!product) {
       res.status(404);
       throw new Error('Product not found');
     }
 
     // Check if user has already reviewed this product
-    const existingReview = await Review.findOne({ user: userId, product: productId });
+    const existingReview = await Review.findOne({ where: { userId, productId } });
     if (existingReview) {
       res.status(400);
       throw new Error('You have already reviewed this product');
     }
 
     // Create new review
-    const review = new Review({
-      user: userId,
-      product: productId,
+    const review = await Review.create({
+      userId,
+      productId,
       rating,
       comment
     });
 
-    await review.save();
-
     // Update product average rating and review count
-    const allReviews = await Review.find({ product: productId });
+    const allReviews = await Review.findAll({ where: { productId } });
     const averageRating = allReviews.reduce((acc, curr) => acc + curr.rating, 0) / allReviews.length;
     product.rating = averageRating;
     product.numReviews = allReviews.length;
@@ -51,16 +62,24 @@ export default function reviewController({ invalidateCache }) {
     // Invalidate cache for this product
     await invalidateCache(`products*${productId}*`);
 
-    // Populate user details before sending response
-    await review.populate('user', 'name');
+    // Fetch review with populated user details
+    const populatedReview = await Review.findByPk(review.id, {
+      include: [{ model: User, as: 'user', attributes: ['name'] }]
+    });
 
-    res.status(201).json(review);
+    res.status(201).json({
+      _id: populatedReview.id,
+      rating: populatedReview.rating,
+      comment: populatedReview.comment,
+      user: populatedReview.user,
+      createdAt: populatedReview.createdAt
+    });
   });
 
-// Update a review
+  // Update a review
   const updateReview = asyncHandler(async (req, res) => {
     const { rating, comment } = req.body;
-    const review = await Review.findById(req.params.reviewId);
+    const review = await Review.findByPk(req.params.reviewId);
 
     if (!review) {
       res.status(404);
@@ -68,7 +87,7 @@ export default function reviewController({ invalidateCache }) {
     }
 
     // Check if user owns the review
-    if (review.user.toString() !== req.user._id.toString()) {
+    if (review.userId.toString() !== req.user.id.toString()) {
       res.status(403);
       throw new Error('Not authorized to update this review');
     }
@@ -78,23 +97,32 @@ export default function reviewController({ invalidateCache }) {
     await review.save();
 
     // Update product average rating
-    const product = await Product.findById(review.product);
-    const allReviews = await Review.find({ product: review.product });
+    const product = await Product.findByPk(review.productId);
+    const allReviews = await Review.findAll({ where: { productId: review.productId } });
     const averageRating = allReviews.reduce((acc, curr) => acc + curr.rating, 0) / allReviews.length;
     product.rating = averageRating;
     product.numReviews = allReviews.length;
     await product.save();
 
     // Invalidate cache for this product
-    await invalidateCache(`products*${review.product}*`);
+    await invalidateCache(`products*${review.productId}*`);
 
-    await review.populate('user', 'name');
-    res.json(review);
+    const populatedReview = await Review.findByPk(review.id, {
+      include: [{ model: User, as: 'user', attributes: ['name'] }]
+    });
+
+    res.json({
+      _id: populatedReview.id,
+      rating: populatedReview.rating,
+      comment: populatedReview.comment,
+      user: populatedReview.user,
+      createdAt: populatedReview.createdAt
+    });
   });
 
-// Delete a review
+  // Delete a review
   const deleteReview = asyncHandler(async (req, res) => {
-    const review = await Review.findById(req.params.reviewId);
+    const review = await Review.findByPk(req.params.reviewId);
 
     if (!review) {
       res.status(404);
@@ -102,16 +130,17 @@ export default function reviewController({ invalidateCache }) {
     }
 
     // Check if user owns the review
-    if (review.user.toString() !== req.user._id.toString()) {
+    if (review.userId.toString() !== req.user.id.toString()) {
       res.status(403);
       throw new Error('Not authorized to delete this review');
     }
 
-    await review.deleteOne();
+    const productId = review.productId;
+    await review.destroy();
 
     // Update product average rating and review count
-    const product = await Product.findById(review.product);
-    const allReviews = await Review.find({ product: review.product });
+    const product = await Product.findByPk(productId);
+    const allReviews = await Review.findAll({ where: { productId } });
     const averageRating = allReviews.length > 0 
       ? allReviews.reduce((acc, curr) => acc + curr.rating, 0) / allReviews.length 
       : 0;
@@ -120,7 +149,7 @@ export default function reviewController({ invalidateCache }) {
     await product.save();
 
     // Invalidate cache for this product
-    await invalidateCache(`products*${review.product}*`);
+    await invalidateCache(`products*${productId}*`);
 
     res.json({ message: 'Review deleted successfully' });
   });
@@ -131,4 +160,4 @@ export default function reviewController({ invalidateCache }) {
     updateReview,
     deleteReview
   };
-} 
+}

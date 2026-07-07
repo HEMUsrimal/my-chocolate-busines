@@ -20,7 +20,7 @@ const router = express.Router();
 // Create admin user route (only for development)
 router.post('/create-admin', async (req, res) => {
   try {
-    const adminExists = await User.findOne({ email: 'admin@chocolate.com' });
+    const adminExists = await User.findOne({ where: { email: 'admin@chocolate.com' } });
     if (adminExists) {
       return res.status(400).json({ message: 'Admin user already exists' });
     }

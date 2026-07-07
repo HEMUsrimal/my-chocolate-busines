@@ -1,84 +1,105 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import { sequelize } from '../config/db.js';
 
-const userSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  _id: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.id;
+    }
+  },
   name: {
-    type: String,
-    required: [true, 'Please provide a name'],
-    trim: true,
-    maxlength: [50, 'Name cannot be more than 50 characters']
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    validate: {
+      notEmpty: { msg: 'Please provide a name' }
+    }
   },
   email: {
-    type: String,
-    required: [true, 'Please provide an email'],
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true,
-    lowercase: true,
-    trim: true,
-    match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please provide a valid email'
-    ]
+    validate: {
+      isEmail: { msg: 'Please provide a valid email' },
+      notEmpty: { msg: 'Please provide an email' }
+    }
   },
   password: {
-    type: String,
-    required: [true, 'Please provide a password'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false // Don't return password in queries
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: { msg: 'Please provide a password' }
+    }
   },
   isAdmin: {
-    type: Boolean,
-    required: true,
-    default: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   isActive: {
-    type: Boolean,
-    default: true
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
   },
-  passwordChangedAt: Date,
-  passwordResetToken: String,
-  passwordResetExpires: Date,
+  passwordChangedAt: {
+    type: DataTypes.DATE
+  },
+  passwordResetToken: {
+    type: DataTypes.STRING
+  },
+  passwordResetExpires: {
+    type: DataTypes.DATE
+  },
   failedLoginAttempts: {
-    type: Number,
-    default: 0
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
   },
-  lockUntil: Date,
-  lastLogin: Date
+  lockUntil: {
+    type: DataTypes.DATE
+  },
+  lastLogin: {
+    type: DataTypes.DATE
+  }
 }, {
-  timestamps: true
-});
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-
-  try {
-    const salt = await bcrypt.genSalt(12); // Increased salt rounds
-    this.password = await bcrypt.hash(this.password, salt);
-    
-    // Set passwordChangedAt if password is modified
-    if (this.isModified('password')) {
-      this.passwordChangedAt = Date.now() - 1000; // Subtract 1 second to ensure token is created after password change
+  defaultScope: {
+    attributes: { exclude: ['password'] }
+  },
+  scopes: {
+    withPassword: {
+      attributes: { include: ['password'] }
     }
-    
-    next();
-  } catch (error) {
-    next(error);
   }
 });
 
-// Method to compare password
-userSchema.methods.matchPassword = async function(enteredPassword) {
+// Hook for hashing password
+const hashPassword = async (user) => {
+  if (user.changed('password')) {
+    const salt = await bcrypt.genSalt(12);
+    user.password = await bcrypt.hash(user.password, salt);
+    user.passwordChangedAt = new Date(Date.now() - 1000);
+  }
+};
+
+User.beforeCreate(hashPassword);
+User.beforeUpdate(hashPassword);
+
+// Instance methods
+User.prototype.matchPassword = async function(enteredPassword) {
   try {
-  return await bcrypt.compare(enteredPassword, this.password);
+    return await bcrypt.compare(enteredPassword, this.password);
   } catch (error) {
     throw new Error('Error comparing passwords');
   }
 };
 
-// Method to check if password was changed after token was issued
-userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+User.prototype.changedPasswordAfter = function(JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
     return JWTTimestamp < changedTimestamp;
@@ -86,32 +107,26 @@ userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
   return false;
 };
 
-// Method to check if account is locked
-userSchema.methods.isLocked = function() {
+User.prototype.isLocked = function() {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 };
 
-// Method to increment failed login attempts
-userSchema.methods.incrementLoginAttempts = async function() {
-  // If we have a previous lock that has expired, reset the attempts
+User.prototype.incrementLoginAttempts = async function() {
   if (this.lockUntil && this.lockUntil < Date.now()) {
-    return await this.updateOne({
-      $set: { failedLoginAttempts: 1 },
-      $unset: { lockUntil: 1 }
+    return await this.update({
+      failedLoginAttempts: 1,
+      lockUntil: null
     });
   }
   
-  // Otherwise increment the attempts
-  const updates = { $inc: { failedLoginAttempts: 1 } };
+  const failedLoginAttempts = this.failedLoginAttempts + 1;
+  const updates = { failedLoginAttempts };
   
-  // Lock the account if we've reached max attempts
-  if (this.failedLoginAttempts + 1 >= 5) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // Lock for 2 hours
+  if (failedLoginAttempts >= 5) {
+    updates.lockUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
   }
   
-  return await this.updateOne(updates);
+  return await this.update(updates);
 };
 
-const User = mongoose.model('User', userSchema);
-
-export default User; 
+export default User;

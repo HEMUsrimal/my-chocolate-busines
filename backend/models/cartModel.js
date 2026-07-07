@@ -1,15 +1,36 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import User from './User.js';
 
-const cartSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  items: [
-    {
-      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-      quantity: { type: Number, default: 1 },
-    },
-  ],
+const Cart = sequelize.define('Cart', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  _id: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.id;
+    }
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    unique: true, // A user has only one cart
+    references: {
+      model: User,
+      key: 'id'
+    }
+  },
+  items: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  }
 });
 
-const Cart = mongoose.model('Cart', cartSchema);
+// Associations
+Cart.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 export default Cart;
