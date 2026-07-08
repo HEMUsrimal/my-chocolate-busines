@@ -12,6 +12,20 @@ const Users = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const userString = localStorage.getItem('user');
+  const loggedInUser = userString ? JSON.parse(userString) : null;
+  const isSeller = loggedInUser?.isSeller && !loggedInUser?.isAdmin;
+
+  if (isSeller) {
+    return (
+      <div className="p-8 text-center">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl font-bold">
+          Access Denied. Only Admins can manage users and roles.
+        </div>
+      </div>
+    );
+  }
+
   const fetchUsers = async () => {
   try {
     setLoading(true);
@@ -129,9 +143,11 @@ const Users = () => {
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           user.isAdmin
                             ? 'bg-purple-100 text-purple-800'
+                            : user.isSeller
+                            ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {user.isAdmin ? 'Admin' : 'User'}
+                          {user.isAdmin ? 'Admin' : user.isSeller ? 'Seller' : 'Customer'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

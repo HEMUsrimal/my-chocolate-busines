@@ -8,6 +8,7 @@ const AddUserForm = ({ onSuccess }) => {
     email: '',
     password: '',
     isAdmin: false,
+    isSeller: false,
   });
 
   const handleChange = (e) => {
@@ -29,6 +30,7 @@ const AddUserForm = ({ onSuccess }) => {
         email: '',
         password: '',
         isAdmin: false,
+        isSeller: false,
       });
     } catch (error) {
       console.error('Failed to add user:', error);
@@ -85,18 +87,34 @@ const AddUserForm = ({ onSuccess }) => {
         />
       </div>
 
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          name="isAdmin"
-          id="isAdmin"
-          checked={formData.isAdmin}
-          onChange={handleChange}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-        />
-        <label htmlFor="isAdmin" className="ml-2 block text-sm text-gray-700">
-          Grant admin privileges
-        </label>
+      <div className="flex gap-6">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            name="isAdmin"
+            id="isAdmin"
+            checked={formData.isAdmin}
+            onChange={handleChange}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="isAdmin" className="ml-2 block text-sm text-gray-700">
+            Grant admin privileges
+          </label>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            name="isSeller"
+            id="isSeller"
+            checked={formData.isSeller}
+            onChange={handleChange}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="isSeller" className="ml-2 block text-sm text-gray-700">
+            Register as Seller
+          </label>
+        </div>
       </div>
 
       <button

@@ -9,6 +9,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +61,7 @@ const Products = () => {
 
   const handleAddSuccess = () => {
     setShowAddForm(false);
+    setEditingProduct(null);
     fetchProducts(1, '');
     setSearchQuery('');
     setCurrentPage(1);
@@ -70,7 +72,14 @@ const Products = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Products</h1>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              setShowAddForm(false);
+              setEditingProduct(null);
+            } else {
+              setShowAddForm(true);
+            }
+          }}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           {showAddForm ? 'Cancel' : (
@@ -84,7 +93,7 @@ const Products = () => {
 
       {showAddForm && (
         <div className="mt-6">
-          <AddProductForm onSuccess={handleAddSuccess} />
+          <AddProductForm onSuccess={handleAddSuccess} product={editingProduct} />
         </div>
       )}
 
@@ -141,7 +150,13 @@ const Products = () => {
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                      <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => {
+                          setEditingProduct(product);
+                          setShowAddForm(true);
+                        }}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
                         <Edit className="w-5 h-5" />
                       </button>
                     </div>

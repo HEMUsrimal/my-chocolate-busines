@@ -12,9 +12,14 @@ import {
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
+
+  const userString = localStorage.getItem('user');
+  const loggedInUser = userString ? JSON.parse(userString) : null;
+  const isSeller = loggedInUser?.isSeller && !loggedInUser?.isAdmin;
+
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-    { icon: Users, label: 'Users', path: '/admin/users' },
+    ...(!isSeller ? [{ icon: Users, label: 'Users', path: '/admin/users' }] : []),
     { icon: Package, label: 'Products', path: '/admin/products' },
     { icon: ShoppingCart, label: 'Orders', path: '/admin/orders' },
     { icon: BarChart, label: 'Analytics', path: '/admin/analytics' },
@@ -24,7 +29,9 @@ const AdminSidebar = () => {
   return (
     <div className="min-h-screen w-64 bg-gray-900 text-white p-4">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-center">Admin Panel</h2>
+        <h2 className="text-2xl font-bold text-center">
+          {isSeller ? 'Seller Panel' : 'Admin Panel'}
+        </h2>
       </div>
       
       <nav>
