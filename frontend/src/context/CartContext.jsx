@@ -6,40 +6,47 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
     try {
       const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : [];
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (error) {
       console.error('Error parsing cart from localStorage:', error);
-      return [];
     }
+    return [];
   });
   const [totalItems, setTotalItems] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
 
   // Save cart to localStorage and calculate totals whenever it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-    const items = cart.reduce((total, item) => total + item.quantity, 0);
-    const price = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const safeCart = Array.isArray(cart) ? cart : [];
+    localStorage.setItem('cart', JSON.stringify(safeCart));
+    const items = safeCart.reduce((total, item) => total + item.quantity, 0);
+    const price = safeCart.reduce((total, item) => total + (item.price * item.quantity), 0);
     setTotalItems(items);
     setTotalPrice(price);
   }, [cart]);
 
   const addToCart = (product) => {
     console.log('Adding to cart:', product);
+    const qtyToAdd = product.quantity !== undefined ? product.quantity : 1;
+    
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item._id === product._id);
+      const safeCart = Array.isArray(prevCart) ? prevCart : [];
+      const existingItem = safeCart.find(item => item._id === product._id);
       
       if (existingItem) {
-        const newCart = prevCart.map(item =>
+        const newCart = safeCart.map(item =>
           item._id === product._id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
         console.log('Updated existing item in cart:', newCart);
         return newCart;
       }
       
-      const newCart = [...prevCart, { ...product, quantity: 1 }];
+      const newCart = [...safeCart, { ...product, quantity: qtyToAdd }];
       console.log('Added new item to cart:', newCart);
       return newCart;
     });
