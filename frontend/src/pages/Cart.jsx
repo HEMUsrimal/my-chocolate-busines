@@ -169,7 +169,13 @@ const Cart = () => {
                 {/* Item image */}
                 <div className="w-24 h-24 bg-[#FCFAF7] border border-chocolate-100 rounded-2xl flex-shrink-0 flex items-center justify-center p-3">
                   <img
-                    src={item.images?.[0] || item.image || '/placeholder-image.jpg'}
+                    src={
+                      (item.images?.[0] && !item.images[0].startsWith('/images/'))
+                        ? item.images[0]
+                        : (item.image && !item.image.startsWith('/images/'))
+                        ? item.image
+                        : 'https://images.unsplash.com/photo-1548907040-4d42b52125ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+                    }
                     alt={item.name}
                     className="w-full h-full object-contain drop-shadow-sm"
                   />

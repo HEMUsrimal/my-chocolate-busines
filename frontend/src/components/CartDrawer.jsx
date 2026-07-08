@@ -121,7 +121,13 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     {/* Item Image */}
                     <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                       <img
-                        src={item.images?.[0] || item.image || "/placeholder-image.jpg"}
+                        src={
+                          (item.images?.[0] && !item.images[0].startsWith('/images/'))
+                            ? item.images[0]
+                            : (item.image && !item.image.startsWith('/images/'))
+                            ? item.image
+                            : 'https://images.unsplash.com/photo-1548907040-4d42b52125ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+                        }
                         alt={item.name}
                         className="w-full h-full object-contain"
                       />
